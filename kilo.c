@@ -5,6 +5,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+
+/*** data ***/
 struct termios orig_termios;                     //default values of terminal so we can reset upon exit
 
 void die(const char *s) {  //exits with nonzero value setting errno to indicate what the error was
@@ -12,12 +14,17 @@ void die(const char *s) {  //exits with nonzero value setting errno to indicate 
   exit(1);
 }
 
+/*** terminal setting ***/
+
 void disableRawMode() {  //puts terminal into raw mode
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)    //catch terminal attribute errors
+    die("tcsetattr");
 }
 
 void enableRawMode() {  //puts terminal into raw mode
-  tcgetattr(STDIN_FILENO, &orig_termios);
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)    //catch terminal attribute errors
+    die("tcsetattr");
+  
   atexit(disableRawMode);                        //set disableRawMode to be called upon exit
 
   // various flags to completely enable raw mode
@@ -32,17 +39,20 @@ void enableRawMode() {  //puts terminal into raw mode
   raw.c_cc[VTIME] = 1;
 
 
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)    //catch terminal attribute errors
+    die("tcsetattr");
 }
+
+/*** init ***/
 
 int main() {
   enableRawMode();
 
-  char c;
   while (1) {
 
     char c = '\0';
-    read(STDIN_FILENO, &c, 1);
+    if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN)  //catch read errors
+      die("read");
 
     if (iscntrl(c)) {
       printf("%d\r\n", c);
