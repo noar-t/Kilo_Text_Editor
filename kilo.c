@@ -15,7 +15,8 @@ void enableRawMode() {
   atexit(disableRawMode);                        //set disableRawMode to be called upon exit
 
   struct termios raw = orig_termios;
-  raw.c_lflag &= ~(ECHO | ICANON);                        //sets raw input flag
+  raw.c_iflag &= ~(ICRNL | IXON);                //carrigae return | set stop/resume transmission
+  raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);        //sets raw input flag | canoncial flag | disable literal input | siginit/sigtstp
 
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
