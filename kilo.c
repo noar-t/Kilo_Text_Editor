@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -19,7 +20,8 @@
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 enum editorKey {
-  ARROW_LEFT = 1000,
+  BACKSPACE = 127,
+  ARROW_LEFT = 1000, // set vals to 1000, 1001...
   ARROW_RIGHT,
   ARROW_UP,
   ARROW_DOWN,
@@ -198,7 +200,7 @@ int getWindowSize(int *rows, int *cols) { // gets size of terminal
 
 /*** row operations ***/
 
-int editorRowCxToRx(erow *row, int cx) {
+int editorRowCxToRx(erow *row, int cx) { // adjusts cx for tabs -> rx
   int rx = 0;
   int j;
   for (j = 0; j < cx; j++) {
@@ -251,9 +253,32 @@ void editorAppendRow(char *s, size_t len) { // add a row to screen
   
   E.row[at].rsize = 0;
   E.row[at].render = NULL;
-  editorUpdateRow(&E.row[at]);
+  editorUpdateRow(&E.row[at]); // update render rsize
   
   E.numrows++;
+}
+
+
+void editorRowInsertChar(erow *row, int at, int c) {
+  if (at < 0 || at > row->size) 
+    at = row->size;
+  
+  row->chars = realloc(row->chars, row->size + 2);
+  memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1); // makes room for char at index at
+  row->size++;
+  row->chars[at] = c;
+  editorUpdateRow(row);
+}
+
+/** editor operations ***/
+
+void editorInsertChar(int c) {
+  if (E.cy == E.numrows) { // cursor rests on tilde
+    editorAppendRow("", 0); // add a row
+  }
+
+  editorRowInsertChar(&E.row[E.cy], E.cx, c);
+  E.cx++;
 }
 
 /*** file i/o ***/
@@ -305,7 +330,7 @@ void abFree(struct abuf *ab) { // frees space/destructure
 
 /*** output ***/
 
-void editorScroll() {
+void editorScroll() { // handles cursor scrolling
   E.rx = 0;
   if (E.cy < E.numrows) {
     E.rx = editorRowCxToRx(&E.row[E.cy], E.cx);
@@ -367,7 +392,7 @@ void editorDrawRows(struct abuf *ab) { // draws rows
 }
 
 
-void editorDrawStatusBar(struct abuf *ab) {
+void editorDrawStatusBar(struct abuf *ab) { // draws lines and file name
   abAppend(ab, "\x1b[7m", 4); // invert colors, black on while
   char status[80], rstatus[80];
   int len = snprintf(status, sizeof(status), "%.20s - %d lines",
@@ -390,10 +415,20 @@ void editorDrawStatusBar(struct abuf *ab) {
     }
   }
   abAppend(ab, "\x1b[m", 3); // revert colors
+  abAppend(ab, "\r\n", 2);
 }
 
 
-void editorRefreshScreen() {
+void editorDrawMessageBar(struct abuf *ab) { // shows messages for users
+  abAppend(ab, "\x1b[K", 3);
+  int msglen = strlen(E.statusmsg);
+  if (msglen > E.screencols)
+    msglen = E.screencols;
+  if (msglen && time(NULL) - E.statusmsg_time < 5)
+    abAppend(ab, E.statusmsg, msglen);
+}
+
+void editorRefreshScreen() { // drivers display changes
   editorScroll();
   
   struct abuf ab = ABUF_INIT;
@@ -403,6 +438,7 @@ void editorRefreshScreen() {
 
   editorDrawRows(&ab);
   editorDrawStatusBar(&ab);
+  editorDrawMessageBar(&ab);
 
   char buf[32]; // put cursor at E.cx and E.cy
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, (E.rx - E.coloff) + 1);
@@ -412,6 +448,15 @@ void editorRefreshScreen() {
 
   write(STDOUT_FILENO, ab.b, ab.len);
   abFree(&ab);
+}
+
+
+void editorSetStatusMessage(const char *fmt, ...) { // print status message
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(E.statusmsg, sizeof(E.statusmsg), fmt, ap);
+  va_end(ap);
+  E.statusmsg_time = time(NULL);
 }
 
 /*** input ***/
@@ -457,6 +502,10 @@ void editorProcessKeypress() { // process char from editorReadKey()
   int c = editorReadKey();
 
   switch (c) {
+    case '\r':
+      /* TODO */
+      break;
+
     case CTRL_KEY('q'):
       write(STDOUT_FILENO, "\x1b[2J", 4); // escape sequence (x1b), then clear whole screen
       write(STDOUT_FILENO, "\x1b[H", 3);  // cursor top left
@@ -470,6 +519,12 @@ void editorProcessKeypress() { // process char from editorReadKey()
     case END_KEY: // end of line
       if (E.cy < E.numrows)
         E.cx = E.row[E.cy].size;
+      break;
+
+    case BACKSPACE:
+    case CTRL_KEY('h'):
+    case DEL_KEY:
+      /* TODO */
       break;
       
     case PAGE_UP: // down a page
@@ -495,6 +550,14 @@ void editorProcessKeypress() { // process char from editorReadKey()
     case ARROW_DOWN:
       editorMoveCursor(c);
       break;
+
+    case CTRL_KEY('l'):
+    case '\x1b':
+      break;
+
+    default: // insertion chars
+      editorInsertChar(c);
+      break;
   }
 }
       
@@ -516,7 +579,7 @@ void initEditor() {
   if (getWindowSize(&E.screenrows, &E.screencols) == -1) 
     die("getWindowSize");
 
-  E.screenrows -= 1;
+  E.screenrows -= 2;
 }
 
 
@@ -526,6 +589,8 @@ int main(int argc, char *argv[]) {
   if (argc >= 2) {
     editorOpen(argv[1]);
   }
+
+  editorSetStatusMessage("HELP: Ctrl-Q = quit");
 
   while (1) {
     editorRefreshScreen();
