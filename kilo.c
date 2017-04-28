@@ -30,7 +30,7 @@ enum editorKey {
 
 /*** data ***/
 
-typedef struct erow {
+typedef struct erow { // a row of a file
   int size;
   char *chars;
 } erow;
@@ -38,37 +38,38 @@ typedef struct erow {
 
 struct editorConfig {
   int cx, cy;
+  int rowoff;
   int screenrows;
   int screencols;
   int numrows;
   erow *row;
-  struct termios orig_termios; //default values of terminal so we can reset upon exit
+  struct termios orig_termios; // default values of terminal
 };
 
 struct editorConfig E;
 
 /*** terminal ***/
 
-void die(const char *s) {  //exits with nonzero value setting errno to indicate what the error was
+void die(const char *s) {  // error handling
   write(STDOUT_FILENO, "\x1b[2J", 4); //clear whole screen
   write(STDOUT_FILENO, "\x1b[H", 3);  //cursor top left
   
   perror(s);
-  exit(1);
+  exit(1); // error exit code
 }
 
 
 void disableRawMode() {  //puts terminal into raw mode
-  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)    //catch terminal attribute errors
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1) // catch terminal attribute errors
     die("tcsetattr");
 }
 
 
 void enableRawMode() {  //puts terminal into raw mode
-  if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1)    //catch terminal attribute errors
+  if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) // catch terminal attribute errors
     die("tcsetattr");
   
-  atexit(disableRawMode);                        //set disableRawMode to be called upon exit
+  atexit(disableRawMode); // set disableRawMode to be called upon exit
 
   // various flags to completely enable raw mode
   struct termios raw = E.orig_termios;
@@ -77,7 +78,7 @@ void enableRawMode() {  //puts terminal into raw mode
   raw.c_cflag |= (CS8);
   raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);        //sets raw input flag | canoncial flag | disable literal input | siginit/sigtstp
 
-  //indexes for c_cc field which controls behavior of read, sets timeout to 1/10 of a sec
+  // indexes for c_cc field which controls behavior of read, sets timeout to 1/10 of a sec
   raw.c_cc[VMIN] = 0;
   raw.c_cc[VTIME] = 1;
 
@@ -87,7 +88,7 @@ void enableRawMode() {  //puts terminal into raw mode
 }
 
 
-int editorReadKey() {  //waits and reads in a valid char and returns it
+int editorReadKey() {  // waits and reads in a valid char and returns it
   int nread;
   char c;
 
@@ -96,7 +97,7 @@ int editorReadKey() {  //waits and reads in a valid char and returns it
       die("read");
   }
 
-  if (c == '\x1b') {//arrow keys behave like wasd
+  if (c == '\x1b') {// arrow keys behave like wasd
     char seq[3];
 
     if (read(STDIN_FILENO, &seq[0], 1) != 1) 
@@ -105,7 +106,7 @@ int editorReadKey() {  //waits and reads in a valid char and returns it
       return '\x1b';
 
     if (seq[0] == '[') {
-      if (seq[1] >= '0' && seq[1] <= '9') { //handles pageup, pagedown
+      if (seq[1] >= '0' && seq[1] <= '9') { // handles pageup, pagedown
         if (read(STDIN_FILENO, &seq[2], 1) != 1)
           return '\x1b';
         if (seq[2] == '~') {
@@ -121,7 +122,7 @@ int editorReadKey() {  //waits and reads in a valid char and returns it
         }
       }
       else { 
-        switch (seq[1]) { //handes arrow key input
+        switch (seq[1]) { // handes arrow key input
           case 'A': return ARROW_UP;
           case 'B': return ARROW_DOWN;
           case 'C': return ARROW_RIGHT;
@@ -146,7 +147,7 @@ int editorReadKey() {  //waits and reads in a valid char and returns it
 }
 
 
-int getCursorPosition(int *rows, int *cols) { //get positon of cursor in terminal:
+int getCursorPosition(int *rows, int *cols) { // get positon of cursor in terminal:
   char buf[32];
   unsigned int i = 0;
 
@@ -171,11 +172,11 @@ int getCursorPosition(int *rows, int *cols) { //get positon of cursor in termina
 }
 
 
-int getWindowSize(int *rows, int *cols) { //gets size of terminal
+int getWindowSize(int *rows, int *cols) { // gets size of terminal
   struct winsize ws;
 
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-    if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12)  //puts curor bottom left
+    if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12)  // puts curor bottom left
       return -1;
     return getCursorPosition(rows, cols);
   }
@@ -188,7 +189,7 @@ int getWindowSize(int *rows, int *cols) { //gets size of terminal
 
 /*** row operations ***/
 
-void editorAppendRow(char *s, size_t len) { //add a row to screen
+void editorAppendRow(char *s, size_t len) { // add a row to screen
   E.row = realloc(E.row, sizeof(erow) * (E.numrows + 1));
 
   int at = E.numrows;
@@ -201,7 +202,7 @@ void editorAppendRow(char *s, size_t len) { //add a row to screen
 
 /*** file i/o ***/
 
-void editorOpen(char *filename) { //open and read a file line by line and pass it to append
+void editorOpen(char *filename) { // open and read a file line by line and pass it to append
   FILE *fp = fopen(filename, "r");
   if (!fp)
     die("fopen");
@@ -230,7 +231,7 @@ struct abuf {
 
 #define ABUF_INIT {NULL, 0}
 
-void abAppend(struct abuf *ab, const char *s, int len) { //putting chars into a buffer
+void abAppend(struct abuf *ab, const char *s, int len) { // putting chars into a buffer
   char *new = realloc(ab->b, ab->len + len);
   if (new == NULL)
     return ;
@@ -239,24 +240,35 @@ void abAppend(struct abuf *ab, const char *s, int len) { //putting chars into a 
   ab->len += len;
 }
 
-void abFree(struct abuf *ab) { //frees space/destructure
+void abFree(struct abuf *ab) { // frees space/destructure
   free(ab->b);
 }
 
 /*** output ***/
 
-void editorDrawRows(struct abuf *ab) { // draws tilde on left like vim
+void editorScroll() {
+  if (E.cy < E.rowoff) { // check if above visible window and scolls accordingly
+    E.rowoff = E.cy;
+  }
+  if (E.cy >= E.rowoff + E.screenrows) { // check if below visible window and scolls accordingly
+    E.rowoff = E.cy - E.screenrows + 1;
+  }
+}
+
+
+void editorDrawRows(struct abuf *ab) { // draws rows
   int y;
   for (y = 0; y < E.screenrows; y++) {
-    if (y >= E.numrows) {
-      if (E.numrows == 0 && y == E.screenrows / 3) { //draw wecome and version
+    int filerow = y + E.rowoff;
+    if (filerow >= E.numrows) {
+      if (E.numrows == 0 && y == E.screenrows / 3) { // draw welcome and version
         char welcome[80];
         int welcomelen = snprintf(welcome, sizeof(welcome),
             "Kilo editor -- version %s", KILO_VERSION);
         if (welcomelen > E.screencols)
           welcomelen = E.screencols;
 
-        int padding  = (E.screencols - welcomelen) / 2; //centering version
+        int padding  = (E.screencols - welcomelen) / 2; // centering version
         if (padding) {
           abAppend(ab, "~", 1);
           padding--;
@@ -267,17 +279,17 @@ void editorDrawRows(struct abuf *ab) { // draws tilde on left like vim
         abAppend(ab, welcome, welcomelen);
       }
       else {
-        abAppend(ab, "~", 1);
+        abAppend(ab, "~", 1); // draws tilde like vim
       }
     }
     else {
-      int len = E.row[y].size;
+      int len = E.row[filerow].size;
       if (len > E.screencols)
         len = E.screencols;
-      abAppend(ab, E.row[y].chars, len);
+      abAppend(ab, E.row[filerow].chars, len);
     }
 
-    abAppend(ab, "\x1b[K", 3); //clear line
+    abAppend(ab, "\x1b[K", 3); // clear line
     if (y < E.screenrows - 1)
       abAppend(ab, "\r\n", 2);
   }
@@ -285,18 +297,20 @@ void editorDrawRows(struct abuf *ab) { // draws tilde on left like vim
 
 
 void editorRefreshScreen() {
+  editorScroll();
+  
   struct abuf ab = ABUF_INIT;
   
-  abAppend(&ab, "\x1b[?25l", 6); //hide cursor sp dpesnt flicker
-  abAppend(&ab, "\x1b[H", 3);  //cursor top lefta
+  abAppend(&ab, "\x1b[?25l", 6); // hide cursor so dpesnt flicker
+  abAppend(&ab, "\x1b[H", 3);  // cursor top left
 
   editorDrawRows(&ab);
 
-  char buf[32]; //put cursor at E.cx and E.cy
+  char buf[32]; // put cursor at E.cx and E.cy
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
   abAppend(&ab, buf, strlen(buf));
 
-  abAppend(&ab, "\x1b[?25h", 6); //show cursor
+  abAppend(&ab, "\x1b[?25h", 6); // show cursor
 
   write(STDOUT_FILENO, ab.b, ab.len);
   abFree(&ab);
@@ -304,7 +318,7 @@ void editorRefreshScreen() {
 
 /*** input ***/
 
-void editorMoveCursor(int key) {//increments/decrements cursor position
+void editorMoveCursor(int key) {// increments/decrements cursor position
   switch (key) {
     case ARROW_LEFT:
       if (E.cx != 0)
@@ -319,20 +333,20 @@ void editorMoveCursor(int key) {//increments/decrements cursor position
         E.cy--;
       break;
     case ARROW_DOWN:
-      if (E.cy != E.screenrows - 1)
+      if (E.cy < E.numrows)
         E.cy++;
       break;
   }
 }
 
 
-void editorProcessKeypress() { //process char from editorReadKey()
+void editorProcessKeypress() { // process char from editorReadKey()
   int c = editorReadKey();
 
   switch (c) {
     case CTRL_KEY('q'):
-      write(STDOUT_FILENO, "\x1b[2J", 4); //escape sequence (x1b), then clear whole screen
-      write(STDOUT_FILENO, "\x1b[H", 3);  //cursor top left
+      write(STDOUT_FILENO, "\x1b[2J", 4); // escape sequence (x1b), then clear whole screen
+      write(STDOUT_FILENO, "\x1b[H", 3);  // cursor top left
       exit(0);
       break;
 
@@ -347,7 +361,7 @@ void editorProcessKeypress() { //process char from editorReadKey()
     case PAGE_UP:
     case PAGE_DOWN: {
         int times = E.screenrows;
-        while (times--) //sroll a whole page/ move cursor a whole page
+        while (times--) // sroll a whole page/ move cursor a whole page
           editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
       }
       break;
@@ -365,10 +379,11 @@ void editorProcessKeypress() { //process char from editorReadKey()
 /*** init ***/
 
 void initEditor() {
-  E.cx = 0;
-  E.cy = 0;
-  E.numrows = 0;
-  E.row = NULL;
+  E.cx = 0;      // cursor x
+  E.cy = 0;      // cursor y
+  E.rowoff = 0;  // row offset
+  E.numrows = 0; // rows in file
+  E.row = NULL;  // file row array
 
   if (getWindowSize(&E.screenrows, &E.screencols) == -1) 
     die("getWindowSize");
