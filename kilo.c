@@ -60,6 +60,10 @@ struct editorConfig { // global config data
 
 struct editorConfig E;
 
+/*** prototypes ***/
+
+void editorSetStatusMessage(const char *fmt, ...);
+
 /*** terminal ***/
 
 void die(const char *s) {  // error handling
@@ -335,10 +339,19 @@ void editorSave() {
   char *buf = editorRowsToString(&len); // converts file to strings
 
   int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
-  ftruncate(fd, len); // sets file size
-  write(fd, buf, len); // writes string out
-  close(fd);
+  if (fd != -1) {
+    if (ftruncate(fd, len) != -1) { // sets file length
+      if (write(fd, buf, len) == len) { // writes out
+        close(fd);
+        free(buf);
+        editorSetStatusMessage("%d bytes written to disk", len);
+        return;
+      }
+    }
+  }
+
   free(buf); // frees string mem
+  editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }
 
 /*** append buffer ***/
