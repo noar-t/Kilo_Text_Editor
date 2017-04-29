@@ -279,6 +279,16 @@ void editorRowInsertChar(erow *row, int at, int c) {
   E.dirty++;
 }
 
+
+void editorRowDelChar(erow *row, int at) {
+  if (at < 0 || at >= row->size)
+    return;
+  memmove(&row->chars[at], &row->chars[at + 1], row->size - at); // move row left one with null at the end
+  row->size--;
+  editorUpdateRow(row);
+  E.dirty++;
+}
+
 /** editor operations ***/
 
 void editorInsertChar(int c) {
@@ -288,6 +298,18 @@ void editorInsertChar(int c) {
 
   editorRowInsertChar(&E.row[E.cy], E.cx, c);
   E.cx++;
+}
+
+
+void editorDelChar() {
+  if (E.cy == E.numrows)
+    return;
+
+  erow *row = &E.row[E.cy];
+  if (E.cx > 0) {
+    editorRowDelChar(row, E.cx - 1);
+    E.cx--; // decriment for deleted char
+  }
 }
 
 /*** file i/o ***/
@@ -516,7 +538,7 @@ void editorSetStatusMessage(const char *fmt, ...) { // print status message
 
 /*** input ***/
 
-void editorMoveCursor(int key) {// increments/decrements cursor position
+void editorMoveCursor(int key) { // increments/decrements cursor position
   erow *row = (E.cy >= E.numrows) ? NULL : &E.row[E.cy]; // handle cursor past right edge
   
   switch (key) {
@@ -591,7 +613,9 @@ void editorProcessKeypress() { // process char from editorReadKey()
     case BACKSPACE:
     case CTRL_KEY('h'):
     case DEL_KEY:
-      /* TODO */
+      if (c == DEL_KEY)
+        editorMoveCursor(ARROW_RIGHT);
+      editorDelChar();
       break;
       
     case PAGE_UP: // down a page
@@ -626,6 +650,8 @@ void editorProcessKeypress() { // process char from editorReadKey()
       editorInsertChar(c);
       break;
   }
+
+  quit_times = KILO_QUIT_TIMES; // reset ^q counter
 }
       
 
