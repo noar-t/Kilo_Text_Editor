@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -42,7 +43,7 @@ typedef struct erow { // a row of a file
 } erow;
 
 
-struct editorConfig {
+struct editorConfig { // global config data
   int cx, cy;
   int rx;
   int rowoff;
@@ -283,6 +284,26 @@ void editorInsertChar(int c) {
 
 /*** file i/o ***/
 
+char *editorRowsToString(int *buflen) {
+  int totlen = 0;
+  int j;
+  for (j = 0; j < E.numrows; j++) // sum length of each row + 1 for new line
+    totlen += E.row[j].size + 1;
+  *buflen = totlen;
+
+  char *buf = malloc(totlen);
+  char *p = buf;
+  for (j = 0; j < E.numrows; j++) {
+    memcpy(p, E.row[j].chars, E.row[j].size); // copy each row to buffer end
+    p += E.row[j].size;
+    *p = '\n'; // add new line at end of each row
+    p++;
+  }
+
+  return buf; // returns string of whole file
+}
+
+
 void editorOpen(char *filename) { // open and read a file line by line and pass it to append
   free(E.filename);
   E.filename = strdup(filename);
@@ -305,6 +326,20 @@ void editorOpen(char *filename) { // open and read a file line by line and pass 
   fclose(fp);
 }
 
+
+void editorSave() {
+  if (E.filename == NULL) // if no file open
+    return;
+  
+  int len;
+  char *buf = editorRowsToString(&len); // converts file to strings
+
+  int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
+  ftruncate(fd, len); // sets file size
+  write(fd, buf, len); // writes string out
+  close(fd);
+  free(buf); // frees string mem
+}
 
 /*** append buffer ***/
 
@@ -509,6 +544,12 @@ void editorProcessKeypress() { // process char from editorReadKey()
     case CTRL_KEY('q'):
       write(STDOUT_FILENO, "\x1b[2J", 4); // escape sequence (x1b), then clear whole screen
       write(STDOUT_FILENO, "\x1b[H", 3);  // cursor top left
+      exit(0);
+      break;
+    
+    case CTRL_KEY('s'):
+      write(STDOUT_FILENO, "\x1b[2J", 4);
+      write(STDOUT_FILENO, "\x1b[H", 3);
       exit(0);
       break;
 
