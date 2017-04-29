@@ -17,6 +17,7 @@
 
 #define KILO_VERSION "0.0.1"
 #define KILO_TAB_STOP 8
+#define KILO_QUIT_TIMES 3
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
@@ -553,6 +554,8 @@ void editorMoveCursor(int key) {// increments/decrements cursor position
 
 
 void editorProcessKeypress() { // process char from editorReadKey()
+  static int quit_times = KILO_QUIT_TIMES;
+
   int c = editorReadKey();
 
   switch (c) {
@@ -561,6 +564,12 @@ void editorProcessKeypress() { // process char from editorReadKey()
       break;
 
     case CTRL_KEY('q'):
+      if (E.dirty && quit_times > 0) { // test if ^q pressed enough when file is dirty
+        editorSetStatusMessage("WARNING!!! File has unsaved changes. "
+            "Press Ctrl-Q %d more times to quit", quit_times);
+        quit_times--;
+        return;
+      }
       write(STDOUT_FILENO, "\x1b[2J", 4); // escape sequence (x1b), then clear whole screen
       write(STDOUT_FILENO, "\x1b[H", 3);  // cursor top left
       exit(0);
