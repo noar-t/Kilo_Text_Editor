@@ -52,6 +52,7 @@ struct editorConfig { // global config data
   int screencols;
   int numrows;
   erow *row;
+  int dirty;
   char *filename;
   char statusmsg[80];
   time_t statusmsg_time;
@@ -261,6 +262,7 @@ void editorAppendRow(char *s, size_t len) { // add a row to screen
   editorUpdateRow(&E.row[at]); // update render rsize
   
   E.numrows++;
+  E.dirty++;
 }
 
 
@@ -273,6 +275,7 @@ void editorRowInsertChar(erow *row, int at, int c) {
   row->size++;
   row->chars[at] = c;
   editorUpdateRow(row);
+  E.dirty++;
 }
 
 /** editor operations ***/
@@ -328,6 +331,7 @@ void editorOpen(char *filename) { // open and read a file line by line and pass 
 
   free(line);
   fclose(fp);
+  E.dirty = 0;
 }
 
 
@@ -344,6 +348,7 @@ void editorSave() {
       if (write(fd, buf, len) == len) { // writes out
         close(fd);
         free(buf);
+        E.dirty = 0;
         editorSetStatusMessage("%d bytes written to disk", len);
         return;
       }
@@ -443,8 +448,9 @@ void editorDrawRows(struct abuf *ab) { // draws rows
 void editorDrawStatusBar(struct abuf *ab) { // draws lines and file name
   abAppend(ab, "\x1b[7m", 4); // invert colors, black on while
   char status[80], rstatus[80];
-  int len = snprintf(status, sizeof(status), "%.20s - %d lines",
-      E.filename ? E.filename : "[No Name]", E.numrows);
+  int len = snprintf(status, sizeof(status), "%.20s - %d lines %s",
+      E.filename ? E.filename : "[No Name]", E.numrows,
+      E.dirty ? "(modified)" : "");
   int rlen = snprintf(rstatus, sizeof(rstatus), "%d/%d",
       E.cy + 1, E.numrows);
 
@@ -561,9 +567,7 @@ void editorProcessKeypress() { // process char from editorReadKey()
       break;
     
     case CTRL_KEY('s'):
-      write(STDOUT_FILENO, "\x1b[2J", 4);
-      write(STDOUT_FILENO, "\x1b[H", 3);
-      exit(0);
+      editorSave();
       break;
 
     case HOME_KEY: // beginning of line
@@ -626,6 +630,7 @@ void initEditor() {
   E.coloff = 0;      // col offset
   E.numrows = 0;     // rows in file
   E.row = NULL;      // file row array
+  E.dirty = 0;       // file been edited?
   E.filename = NULL; // filename string for status
   E.statusmsg[0] = '\0';
   E.statusmsg_time = 0;
@@ -644,7 +649,7 @@ int main(int argc, char *argv[]) {
     editorOpen(argv[1]);
   }
 
-  editorSetStatusMessage("HELP: Ctrl-Q = quit");
+  editorSetStatusMessage("HELP: Ctrl-Q = quit | Ctrl-Q = quit");
 
   while (1) {
     editorRefreshScreen();
