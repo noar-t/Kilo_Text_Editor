@@ -249,10 +249,13 @@ void editorUpdateRow(erow *row) { // handles rendering special characters like t
 }
 
 
-void editorAppendRow(char *s, size_t len) { // add a row to screen
-  E.row = realloc(E.row, sizeof(erow) * (E.numrows + 1));
+void editorInsertRow(int at, char *s, size_t len) {
+  if (at < 0 || at > E.numrows)
+    return;
 
-  int at = E.numrows;
+  E.row = realloc(E.row, sizeof(erow) * (E.numrows + 1));
+  memmove(&E.row[at + 1], &E.row[at], sizeof(erow) * (E.numrows - at));
+
   E.row[at].size = len;
   E.row[at].chars = malloc(len + 1);
   memcpy(E.row[at].chars, s, len);
@@ -267,6 +270,22 @@ void editorAppendRow(char *s, size_t len) { // add a row to screen
 }
 
 
+void editorFreeRow(erow *row) { // free row space/delete row
+  free(row->render);
+  free(row->chars);
+}
+
+
+void editorDelRow(int at) { // del at row begining
+  if (at < 0 || at >= E.numrows)
+    return;
+  editorFreeRow(&E.row[at]);
+  memmove(&E.row[at], &E.row[at + 1], sizeof(erow) * (E.numrows - at -1)); // move row up 1
+  E.numrows--;
+  E.dirty++;
+}
+
+
 void editorRowInsertChar(erow *row, int at, int c) {
   if (at < 0 || at > row->size) 
     at = row->size;
@@ -275,6 +294,16 @@ void editorRowInsertChar(erow *row, int at, int c) {
   memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1); // makes room for char at index at
   row->size++;
   row->chars[at] = c;
+  editorUpdateRow(row);
+  E.dirty++;
+}
+
+
+void editorRowAppendString(erow *row, char *s, size_t len) {
+  row->chars = realloc(row->chars, row->size + len + 1); // new row including null
+  memcpy(&row->chars[row->size], s, len); // copy the string
+  row->size += len; // new len
+  row->chars[row->size] = '\0'; // terminate row with null
   editorUpdateRow(row);
   E.dirty++;
 }
@@ -293,7 +322,7 @@ void editorRowDelChar(erow *row, int at) {
 
 void editorInsertChar(int c) {
   if (E.cy == E.numrows) { // cursor rests on tilde
-    editorAppendRow("", 0); // add a row
+    editorInsertRow(E.numrows, "", 0); // add a row
   }
 
   editorRowInsertChar(&E.row[E.cy], E.cx, c);
@@ -304,11 +333,19 @@ void editorInsertChar(int c) {
 void editorDelChar() {
   if (E.cy == E.numrows)
     return;
+  if (E.cx == 0 && E.cy == 0) // cant delete first line
+    return;
 
   erow *row = &E.row[E.cy];
   if (E.cx > 0) {
     editorRowDelChar(row, E.cx - 1);
     E.cx--; // decriment for deleted char
+  }
+  else {
+    E.cx = E.row[E.cy - 1].size;
+    editorRowAppendString(&E.row[E.cy - 1], row->chars, row->size); // appends row up 1
+    editorDelRow(E.cy);
+    E.cy--;
   }
 }
 
@@ -349,7 +386,7 @@ void editorOpen(char *filename) { // open and read a file line by line and pass 
     while (linelen > 0 && (line[linelen - 1] == '\n' || line[linelen -1] == '\r'))
       linelen--;
 
-    editorAppendRow(line, linelen);
+    editorInsertRow(E.numrows, line, linelen);
   }
 
   free(line);
