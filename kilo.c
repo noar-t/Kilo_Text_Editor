@@ -250,11 +250,11 @@ void editorUpdateRow(erow *row) { // handles rendering special characters like t
 
 
 void editorInsertRow(int at, char *s, size_t len) {
-  if (at < 0 || at > E.numrows)
+  if (at < 0 || at > E.numrows) // verify the value of at is valid
     return;
 
   E.row = realloc(E.row, sizeof(erow) * (E.numrows + 1));
-  memmove(&E.row[at + 1], &E.row[at], sizeof(erow) * (E.numrows - at));
+  memmove(&E.row[at + 1], &E.row[at], sizeof(erow) * (E.numrows - at)); //allocates space for new line
 
   E.row[at].size = len;
   E.row[at].chars = malloc(len + 1);
@@ -327,6 +327,23 @@ void editorInsertChar(int c) {
 
   editorRowInsertChar(&E.row[E.cy], E.cx, c);
   E.cx++;
+}
+
+
+void editorInsertNewline() {
+  if (E.cx == 0) {
+    editorInsertRow(E.cy, "", 0); // if there is nothing in current row
+  }
+  else {
+    erow *row = &E.row[E.cy];
+    editorInsertRow(E.cy + 1, &row->chars[E.cx], row->size - E.cx); // write current row
+    row = &E.row[E.cy];
+    row->size = E.cx;
+    row->chars[row->size] = '\0'; // terminate new row
+    editorUpdateRow(row); // add new row
+  }
+  E.cy++;
+  E.cx = 0;
 }
 
 
