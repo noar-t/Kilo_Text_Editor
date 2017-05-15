@@ -340,7 +340,7 @@ void editorInsertNewline() {
     row = &E.row[E.cy];
     row->size = E.cx;
     row->chars[row->size] = '\0'; // terminate new row
-    editorUpdateRow(row); // add new row
+    editorUpdateRow(row); // add new row or other half of exising row
   }
   E.cy++;
   E.cx = 0;
@@ -635,8 +635,8 @@ void editorProcessKeypress() { // process char from editorReadKey()
   int c = editorReadKey();
 
   switch (c) {
-    case '\r':
-      /* TODO */
+    case '\r': // return key
+      editorInsertNewline();
       break;
 
     case CTRL_KEY('q'):
