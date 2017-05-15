@@ -555,11 +555,13 @@ void editorDrawStatusBar(struct abuf *ab) { // draws lines and file name
 void editorDrawMessageBar(struct abuf *ab) { // shows messages for users
   abAppend(ab, "\x1b[K", 3);
   int msglen = strlen(E.statusmsg);
+
   if (msglen > E.screencols)
     msglen = E.screencols;
   if (msglen && time(NULL) - E.statusmsg_time < 5)
     abAppend(ab, E.statusmsg, msglen);
 }
+
 
 void editorRefreshScreen() { // drivers display changes
   editorScroll();
@@ -606,7 +608,12 @@ char *editorPrompt(char *prompt) { // provides method to prompt user
     editorRefreshScreen();
 
     int c = editorReadKey();
-    if (c == '\r') { // validates key
+    if (c == '\x1b') {
+      editorSetStatusMessage("");
+      free(buf);
+      return NULL;
+    }
+    else if (c == '\r') { // validates key
       if (buflen != 0) {
         editorSetStatusMessage("");
         return buf;
