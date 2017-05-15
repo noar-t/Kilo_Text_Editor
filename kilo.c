@@ -66,6 +66,7 @@ struct editorConfig E;
 
 void editorSetStatusMessage(const char *fmt, ...);
 void editorRefreshScreen();
+char *editorPrompt(char *prompt);
 
 /*** terminal ***/
 
@@ -415,7 +416,7 @@ void editorOpen(char *filename) { // open and read a file line by line and pass 
 
 void editorSave() {
   if (E.filename == NULL) // if no file open
-    return;
+    E.filename = editorPrompt("Save as: %s");
   
   int len;
   char *buf = editorRowsToString(&len); // converts file to strings
