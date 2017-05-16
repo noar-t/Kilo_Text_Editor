@@ -415,8 +415,13 @@ void editorOpen(char *filename) { // open and read a file line by line and pass 
 
 
 void editorSave() {
-  if (E.filename == NULL) // if no file open
-    E.filename = editorPrompt("Save as: %s");
+  if (E.filename == NULL) { // if no file open
+    E.filename = editorPrompt("Save as: %s (ESC to cancel)");
+    if (E.filename == NULL) {
+      editorSetStatusMessage("Save aborted");
+      return;
+    }
+  }
   
   int len;
   char *buf = editorRowsToString(&len); // converts file to strings
