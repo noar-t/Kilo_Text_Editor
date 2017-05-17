@@ -464,7 +464,7 @@ void editorFindCallback(char *query, int key) { // function to continously searc
   static int direction = 1;
   
   
-  if (key == '\r' || key == '\x1b') {
+  if (key == '\r' || key == '\x1b') { // logic for moving forward and back
     last_match = -1;
     direction = 1;
     return;
@@ -485,7 +485,7 @@ void editorFindCallback(char *query, int key) { // function to continously searc
 
   int i;
   for (i = 0; i < E.numrows; i++) {
-    current += direction;
+    current += direction; // logic for moving forward and back
     if (current == -1)
       current = E.numrows - 1;
     else if (current == E.numrows)
@@ -510,7 +510,8 @@ void editorFind() {
   int saved_coloff = E.coloff;
   int saved_rowoff = E.rowoff;
 
-  char *query = editorPrompt("Search: %s (ESC to cancel)", editorFindCallback); // null if user cancels
+  char *query = editorPrompt("Search: %s (Use ESC/Arrows/Enter)",
+      editorFindCallback); // null if user cancels
   
   if (query)
     free(query); // frees query memory
