@@ -443,6 +443,28 @@ void editorSave() {
   editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }
 
+/*** find ***/
+
+void editorFind() {
+  char *query = editorPrompt("Search: %s (ESC to cancel)"); // null if user cancels
+  if (query == NULL)
+    return;
+
+  int i;
+  for (i = 0; i < E.numrows; i++) {
+    erow *row = &E.row[1];
+    char *match = strstr(row->render, query); // checks if string is present
+    if (match) { // if string is found
+      E.cy = i;
+      E.cx = match - row->render;
+      E.rowoff = E.numrows;
+      break;
+    }
+  }
+
+  free(query); // frees query memory
+}
+
 /*** append buffer ***/
 
 struct abuf {
