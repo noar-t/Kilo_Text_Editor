@@ -747,6 +747,10 @@ void editorProcessKeypress() { // process char from editorReadKey()
         E.cx = E.row[E.cy].size;
       break;
 
+    case CTRL_KEY('f'):
+      editorFind();
+      break;
+
     case BACKSPACE:
     case CTRL_KEY('h'):
     case DEL_KEY:
