@@ -470,7 +470,7 @@ void editorFind() {
     char *match = strstr(row->render, query); // checks if string is present
     if (match) { // if string is found
       E.cy = i;
-      E.cx = match - row->render;
+      E.cx = editorRowRxToCx(row, match - row->render);
       E.rowoff = E.numrows;
       break;
     }
