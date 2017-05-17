@@ -460,8 +460,22 @@ void editorSave() {
 /*** find ***/
 
 void editorFindCallback(char *query, int key) { // function to continously search
+  static int last_match = -1;
+  static int direction = 1;
+  
+  
   if (key == '\r' || key == '\x1b') {
+    last_match = -1;
+    direction = 1;
     return;
+  }
+  else if (key == ARROW_RIGHT || key == ARROW_DOWN)
+    direction = 1;
+  else if (key == ARROW_LEFT || key == ARROW_UP)
+    direction = -1;
+  else {
+    last_match = -1;
+    direction = 1;
   }
   
   int i;
