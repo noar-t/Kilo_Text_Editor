@@ -734,7 +734,7 @@ void editorProcessKeypress() { // process char from editorReadKey()
       exit(0);
       break;
     
-    case CTRL_KEY('s'):
+    case CTRL_KEY('s'): // ^s bound to save
       editorSave();
       break;
 
@@ -747,11 +747,11 @@ void editorProcessKeypress() { // process char from editorReadKey()
         E.cx = E.row[E.cy].size;
       break;
 
-    case CTRL_KEY('f'):
+    case CTRL_KEY('f'): // ^f bound to find
       editorFind();
       break;
 
-    case BACKSPACE:
+    case BACKSPACE: // delete key
     case CTRL_KEY('h'):
     case DEL_KEY:
       if (c == DEL_KEY)
@@ -825,7 +825,8 @@ int main(int argc, char *argv[]) {
     editorOpen(argv[1]);
   }
 
-  editorSetStatusMessage("HELP: Ctrl-Q = quit | Ctrl-Q = quit");
+  editorSetStatusMessage(
+      "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
 
   while (1) {
     editorRefreshScreen();
