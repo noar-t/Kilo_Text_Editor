@@ -466,7 +466,7 @@ void editorFindCallback(char *query, int key) { // function to continously searc
   
   int i;
   for (i = 0; i < E.numrows; i++) {
-    erow *row = &E.row[1];
+    erow *row = &E.row[i];
     char *match = strstr(row->render, query); // checks if string is present
     if (match) { // if string is found
       E.cy = i;
@@ -475,15 +475,25 @@ void editorFindCallback(char *query, int key) { // function to continously searc
       break;
     }
   }
-
 }
 
 
 void editorFind() {
+  int saved_cx = E.cx;
+  int saved_cy = E.cy;
+  int saved_coloff = E.coloff;
+  int saved_rowoff = E.rowoff;
+
   char *query = editorPrompt("Search: %s (ESC to cancel)", editorFindCallback); // null if user cancels
   
   if (query)
     free(query); // frees query memory
+  else { // if aborted, restore values
+    E.cx = saved_cx;
+    E.cy = saved_cy;
+    E.coloff = saved_coloff;
+    E.rowoff = saved_rowoff;
+  }
 }
 
 /*** append buffer ***/
