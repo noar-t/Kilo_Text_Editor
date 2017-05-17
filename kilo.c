@@ -221,6 +221,20 @@ int editorRowCxToRx(erow *row, int cx) { // adjusts cx for tabs -> rx
 }
 
 
+int editorRowRxToCx(erow *row, int rx) {
+  int cur_rx = 0;
+  int cx;
+  for (cx = 0; cx < row->size; cx++) { // loop through acccumulating cur_rx for conversion
+    if (row->chars[cx] == '\t')
+      cur_rx += (KILO_TAB_STOP - 1) - (cur_rx % KILO_TAB_STOP);
+    cur_rx++;
+    if (cur_rx > rx)
+      return cx;
+  }
+  return cx; // if out of range
+}
+
+
 void editorUpdateRow(erow *row) { // handles rendering special characters like tab
   free(row->render);
   row->render = malloc(row->size + 1);
