@@ -430,7 +430,7 @@ void editorOpen(char *filename) { // open and read a file line by line and pass 
 
 void editorSave() {
   if (E.filename == NULL) { // if no file open
-    E.filename = editorPrompt("Save as: %s (ESC to cancel)");
+    E.filename = editorPrompt("Save as: %s (ESC to cancel)", NULL);
     if (E.filename == NULL) {
       editorSetStatusMessage("Save aborted");
       return;
@@ -459,11 +459,11 @@ void editorSave() {
 
 /*** find ***/
 
-void editorFind() {
-  char *query = editorPrompt("Search: %s (ESC to cancel)"); // null if user cancels
-  if (query == NULL)
+void editorFindCallback(char *query, int key) { // function to continously search
+  if (key == '\r' || key == '\x1b') {
     return;
-
+  }
+  
   int i;
   for (i = 0; i < E.numrows; i++) {
     erow *row = &E.row[1];
@@ -476,7 +476,14 @@ void editorFind() {
     }
   }
 
-  free(query); // frees query memory
+}
+
+
+void editorFind() {
+  char *query = editorPrompt("Search: %s (ESC to cancel)", editorFindCallback); // null if user cancels
+  
+  if (query)
+    free(query); // frees query memory
 }
 
 /*** append buffer ***/
