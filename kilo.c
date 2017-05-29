@@ -281,6 +281,8 @@ void editorUpdateRow(erow *row) { // handles rendering special characters like t
   
   row->render[idx] = '\0';
   row->rsize = idx;
+
+  editorUpdateSyntax(row);
 }
 
 
