@@ -213,6 +213,19 @@ int getWindowSize(int *rows, int *cols) { // gets size of terminal
   }
 }
 
+/*** syntax highlighting ***/
+
+void editorUpdateSyntax(erow *row) {
+  row->hl = realloc(row->hl, row->rsize);
+  memset(row->hl, HL_NORMAL, row->rsize);
+  int i;
+  for (i = 0; i < row->size; i++) {
+    if (isdigit(row->render[i])) {
+      row->hl[i] = HL_NUMBER;
+    }
+  }
+}
+
 /*** row operations ***/
 
 int editorRowCxToRx(erow *row, int cx) { // adjusts cx for tabs -> rx
