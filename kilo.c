@@ -34,6 +34,11 @@ enum editorKey {
   PAGE_DOWN
 };
 
+enum editorHighlight {
+  HL_NORMAL = 0,
+  HL_NUMBER
+};
+
 /*** data ***/
 
 typedef struct erow { // a row of a file
@@ -41,7 +46,7 @@ typedef struct erow { // a row of a file
   int rsize;
   char *chars;
   char *render;
-  unsigned char *hl;
+  unsigned char *hl; // designates type of highlighting
 } erow;
 
 
