@@ -279,6 +279,28 @@ int editorSyntaxToColor(int hl) {
   }
 }
 
+void editorSelectSyntaxHighlight() {
+  E.syntax = NULL;
+  if (E.filename == NULL)
+    return;
+
+  char *ext = strrchr(E.filename, '.');
+
+  for (unsigned int j = 0; j < HLDB_ENTRIES; j++) {
+    struct editorSyntax *s = &HLDB[j];
+    unsigned int i = 0;
+    while (s->filematch[i]) {
+      int is_ext = (s->filematch[i][0] == '.');
+      if ((is_ext && ext && !strcmp(ext, s->filematch[i])) ||
+          (!is_ext && strstr(E.filename, s->filematch[i]))) {
+        E.syntax = s;
+        return;
+      }
+      i++;
+    }
+  }
+}
+
 /*** row operations ***/
 
 int editorRowCxToRx(erow *row, int cx) { // adjusts cx for tabs -> rx
@@ -483,6 +505,8 @@ char *editorRowsToString(int *buflen) {
 void editorOpen(char *filename) { // open and read a file line by line and pass it to append
   free(E.filename);
   E.filename = strdup(filename);
+
+  editorSelectSyntaxHighlight();
   
   FILE *fp = fopen(filename, "r");
   if (!fp)
@@ -511,6 +535,7 @@ void editorSave() {
       editorSetStatusMessage("Save aborted");
       return;
     }
+editorSelectSyntaxHighlight();
   }
   
   int len;
