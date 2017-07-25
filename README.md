@@ -11,5 +11,5 @@ This is a C based text editor. This project is following [this guide](http://vie
 Kilo requires make and gcc to compile. To make use the provided make file.
 ```
 make
-./kilo <file>
+./kilo.ex <file>
 ```
