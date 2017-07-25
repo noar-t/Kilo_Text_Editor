@@ -5,11 +5,12 @@ This is a C based text editor. This project is following [this guide](http://vie
 2. Supports searching through documents.
 3. Can create documents or open existing files.
 4. Prevents users from closing document if changes are present.
-## Screenshot
-![kiloscrnsht](https://i.imgur.com/edA9nYd.png)
 ## Building Kilo
 Kilo requires make and gcc to compile. To make use the provided make file.
 ```
 make
 ./kilo.ex <file>
 ```
+## Screenshot
+![kiloscrnsht](https://i.imgur.com/edA9nYd.png)
+
