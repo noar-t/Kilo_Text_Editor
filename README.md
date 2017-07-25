@@ -9,6 +9,7 @@ This is a C based text editor. This project is following [this guide](http://vie
 ![kiloscrnsht](https://i.imgur.com/edA9nYd.png)
 ## Building Kilo
 Kilo requires make and gcc to compile. To make use the provided make file.
-```make
+```
+make
 ./kilo <file>
 ```
